@@ -1,9 +1,6 @@
 import db from "../config/db.js";
 
-const parseCoordinate = (value) => {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-};
+const toNumber = (value) => Number(value);
 
 const sendServerError = (res, error) => {
   console.error(error);
@@ -16,10 +13,9 @@ const sendServerError = (res, error) => {
 export const addSchool = async (req, res) => {
   try {
     const { name, address, latitude, longitude } = req.body;
-    const lat = parseCoordinate(latitude);
-    const lon = parseCoordinate(longitude);
+    const lat = toNumber(latitude);
+    const lon = toNumber(longitude);
 
-    
     if (!name || !address || latitude == null || longitude == null) {
       return res.status(400).json({
         success: false,
@@ -27,7 +23,7 @@ export const addSchool = async (req, res) => {
       });
     }
 
-    if (lat == null || lon == null) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return res.status(400).json({
         success: false,
         message: "Latitude and Longitude must be numbers",
@@ -39,7 +35,7 @@ export const addSchool = async (req, res) => {
       [name, address, lat, lon]
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "School added successfully",
     });
@@ -47,8 +43,9 @@ export const addSchool = async (req, res) => {
     return sendServerError(res, error);
   }
 };
+
 const getDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371; 
+  const earthRadius = 6371;
 
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
@@ -62,14 +59,14 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return R * c;
+  return earthRadius * c;
 };
 
 export const listSchools = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
-    const lat = parseCoordinate(latitude);
-    const lon = parseCoordinate(longitude);
+    const lat = toNumber(latitude);
+    const lon = toNumber(longitude);
 
     if (latitude == null || longitude == null) {
       return res.status(400).json({
@@ -78,7 +75,7 @@ export const listSchools = async (req, res) => {
       });
     }
 
-    if (lat == null || lon == null) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
       return res.status(400).json({
         success: false,
         message: "Latitude and longitude must be valid numbers",
@@ -101,7 +98,7 @@ export const listSchools = async (req, res) => {
       }))
       .sort((a, b) => a.distance - b.distance);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: sortedSchools,
     });

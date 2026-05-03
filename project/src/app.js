@@ -18,9 +18,12 @@ const schoolsTable = `
   try {
     await mySqlPool.query("SELECT 1");
     await mySqlPool.query(schoolsTable);
-    console.log("MySQL DB CONNECTED ✅");
+    await mySqlPool.query(
+      "ALTER TABLE schools MODIFY id INT NOT NULL AUTO_INCREMENT"
+    );
+    console.log("MySQL connected");
   } catch (error) {
-    console.error("DB Connection Failed ❌", error);
+    console.error("Database connection failed", error);
   }
 })();
 
@@ -29,7 +32,7 @@ app.use(express.json());
 app.use("/api/v1/school", schoolRoutes);
 
 app.get("/", (req, res) => {
-  res.send("API is running 🚀");
+  res.send("API is running");
 });
 
 export default app;
