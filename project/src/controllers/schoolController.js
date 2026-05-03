@@ -1,8 +1,23 @@
 import db from "../config/db.js";
 
+const parseCoordinate = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const sendServerError = (res, error) => {
+  console.error(error);
+  return res.status(500).json({
+    success: false,
+    message: error.message || "Internal server error",
+  });
+};
+
 export const addSchool = async (req, res) => {
   try {
     const { name, address, latitude, longitude } = req.body;
+    const lat = parseCoordinate(latitude);
+    const lon = parseCoordinate(longitude);
 
     
     if (!name || !address || latitude == null || longitude == null) {
@@ -12,7 +27,7 @@ export const addSchool = async (req, res) => {
       });
     }
 
-    if (isNaN(latitude) || isNaN(longitude)) {
+    if (lat == null || lon == null) {
       return res.status(400).json({
         success: false,
         message: "Latitude and Longitude must be numbers",
@@ -21,7 +36,7 @@ export const addSchool = async (req, res) => {
 
     await db.query(
       "INSERT INTO schools (name, address, latitude, longitude) VALUES (?, ?, ?, ?)",
-      [name, address, latitude, longitude]
+      [name, address, lat, lon]
     );
 
     res.status(201).json({
@@ -29,7 +44,7 @@ export const addSchool = async (req, res) => {
       message: "School added successfully",
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error);
   }
 };
 const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -53,25 +68,36 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 export const listSchools = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
+    const lat = parseCoordinate(latitude);
+    const lon = parseCoordinate(longitude);
 
-    if (!latitude || !longitude) {
+    if (latitude == null || longitude == null) {
       return res.status(400).json({
         success: false,
         message: "User latitude and longitude required",
       });
     }
 
-    const [schools] = await db.query("SELECT * FROM schools");
+    if (lat == null || lon == null) {
+      return res.status(400).json({
+        success: false,
+        message: "Latitude and longitude must be valid numbers",
+      });
+    }
+
+    const [schools] = await db.query(
+      "SELECT id, name, address, latitude, longitude FROM schools"
+    );
 
     const sortedSchools = schools
       .map((school) => ({
         ...school,
         distance: getDistance(
-        Number(latitude),
-  Number(longitude),
-  school.latitude,
-  school.longitude
-),
+          lat,
+          lon,
+          Number(school.latitude),
+          Number(school.longitude)
+        ),
       }))
       .sort((a, b) => a.distance - b.distance);
 
@@ -80,6 +106,6 @@ export const listSchools = async (req, res) => {
       data: sortedSchools,
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    return sendServerError(res, error);
   }
 };
